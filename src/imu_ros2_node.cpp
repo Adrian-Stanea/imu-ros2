@@ -37,6 +37,10 @@
 #endif
 
 #include "adi_imu/worker_thread.h"
+#include "adi_imu/hardware_detector.h"
+#include "adi_imu/device_factory.h"
+#include "adi_imu/device_config.h"
+#include "adi_imu/device_handler.h"
 #include "rclcpp/rclcpp.hpp"
 
 /**
@@ -67,13 +71,59 @@ int main(int argc, char * argv[])
   /* First make sure IIO context is available */
   std::string context =
     imu_node->get_parameter("iio_context_string").get_parameter_value().get<std::string>();
+
+  // Initialize hardware detector
+  adi_imu::HardwareDetector hardware_detector;
+  if (!hardware_detector.initializeContext(context)) {
+    RCLCPP_ERROR(rclcpp::get_logger("rclcpp_main"), "Failed to initialize hardware detector context");
+    rclcpp::shutdown();
+    return -1;
+  }
+
+  // Detect hardware
+  auto hardware_info = hardware_detector.detectHardware();
+  if (!hardware_info) {
+    RCLCPP_ERROR(rclcpp::get_logger("rclcpp_main"), "No supported hardware detected");
+    rclcpp::shutdown();
+    return -1;
+  }
+
+  RCLCPP_INFO(rclcpp::get_logger("rclcpp_main"), "Detected device: %s (family: %d)",
+             hardware_info->device_name.c_str(), static_cast<int>(hardware_info->device_family));
+
+  // Create device configuration
+  auto device_config = std::make_shared<DeviceConfig>();
+  device_config->setContextString(context);
+  device_config->setDeviceName(hardware_info->iio_device_name);
+  device_config->setTriggerName(hardware_info->trigger_name);
+  device_config->setCapabilities(hardware_info->capabilities);
+
+  // Create device handler using factory
+  auto device_handler = DeviceFactory::createHandlerForFamily(hardware_info->device_family, device_config);
+  if (!device_handler) {
+    RCLCPP_ERROR(rclcpp::get_logger("rclcpp_main"), "Failed to create device handler for family %d",
+                static_cast<int>(hardware_info->device_family));
+    rclcpp::shutdown();
+    return -1;
+  }
+
+  // Initialize the device handler
+  if (!device_handler->initializeDevice()) {
+    RCLCPP_ERROR(rclcpp::get_logger("rclcpp_main"), "Failed to initialize device");
+    rclcpp::shutdown();
+    return -1;
+  }
+
+  RCLCPP_INFO(rclcpp::get_logger("rclcpp_main"), "Successfully initialized device handler");
+
+  // Create traditional IIO wrapper for backward compatibility with existing publishers
   IIOWrapper m_iio_wrapper;
   ret = m_iio_wrapper.createContext(context.c_str());
 
   if (ret) {
-    std::runtime_error("Error IIO context, exiting ROS2 node");
+    RCLCPP_ERROR(rclcpp::get_logger("rclcpp_main"), "Error creating IIO context for legacy wrapper");
     rclcpp::shutdown();
-    return 0;
+    return -1;
   }
   ImuControlParameters * ctrl_params = new ImuControlParameters(imu_node);
 

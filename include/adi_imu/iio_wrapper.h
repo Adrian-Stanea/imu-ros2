@@ -1,7 +1,6 @@
 /*******************************************************************************
  *   @file   iio_wrapper.h
  *   @brief  Wrapper for iio library
- *   @author Vasile Holonec (Vasile.Holonec@analog.com)
  *******************************************************************************
  * Copyright 2023(c) Analog Devices, Inc.
  *

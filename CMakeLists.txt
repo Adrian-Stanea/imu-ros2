@@ -144,6 +144,20 @@ file(GLOB FILES_H ${CMAKE_SOURCE_DIR}/include/*.h
 file(GLOB FILES_CPP ${CMAKE_SOURCE_DIR}/src/*.cpp
                       ${CMAKE_SOURCE_DIR}/src/${DEVICE_PATH}/*.cpp)
 
+# Add new refactored source files
+list(APPEND FILES_CPP
+    ${CMAKE_SOURCE_DIR}/src/device_factory.cpp
+    ${CMAKE_SOURCE_DIR}/src/device_registry.cpp
+    ${CMAKE_SOURCE_DIR}/src/device_handler.cpp
+    ${CMAKE_SOURCE_DIR}/src/hardware_detector.cpp
+    ${CMAKE_SOURCE_DIR}/src/adis1646x_handler.cpp
+    ${CMAKE_SOURCE_DIR}/src/adis1647x_handler.cpp
+    ${CMAKE_SOURCE_DIR}/src/adis1650x_handler.cpp
+    ${CMAKE_SOURCE_DIR}/src/adis1654x_handler.cpp
+    ${CMAKE_SOURCE_DIR}/src/adis1655x_handler.cpp
+    ${CMAKE_SOURCE_DIR}/src/adis1657x_handler.cpp
+)
+
 add_executable(adi_imu_node ${FILES_H} ${FILES_CPP})
 
 target_include_directories(adi_imu_node PUBLIC
